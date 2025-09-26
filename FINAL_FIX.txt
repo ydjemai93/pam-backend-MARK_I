@@ -1,13 +1,15 @@
-FINAL FIX - 2025-01-10 16:25
+FINAL FIX - 2025-01-10 16:30
+
+STABLE APPROACH: Use older working versions without storage3 conflicts
 
 KEY WORKING VERSIONS:
-- python-dateutil==2.9.0.post0  ← CRITICAL: This version fixes six.moves._thread
-- supabase==2.13.0              ← Latest stable  
-- httpx==0.27.0                 ← Compatible with supabase 2.13.0
+- supabase==1.0.3               ← OLDER STABLE VERSION (before storage3 issues)
+- python-dateutil==2.8.2       ← Compatible version
+- httpx==0.23.3                 ← Compatible with supabase 1.0.3
 - six==1.16.0                   ← Latest
-- pytz==2023.3                  ← Latest
+- pytz==2022.7                  ← Stable version
 
-PORT FIXED: User manually set to 8080
-CMD works with proper shell expansion
+PORT FIXED: Works with shell expansion
+CMD: ["sh", "-c", "PORT=${PORT:-8000}; exec uvicorn api.main:app --host 0.0.0.0 --port $PORT"]
 
-THIS SHOULD FINALLY WORK!
+STRATEGY: Avoid newer supabase versions that have complex storage3 dependencies

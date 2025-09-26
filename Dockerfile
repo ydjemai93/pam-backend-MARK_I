@@ -18,12 +18,12 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Upgrade pip and install wheel
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# WORKING VERSIONS - FIXES SIX.MOVES._THREAD ERROR
+# STABLE APPROACH: Use older working versions
 RUN pip install --no-cache-dir six==1.16.0
-RUN pip install --no-cache-dir python-dateutil==2.9.0.post0
-RUN pip install --no-cache-dir pytz==2023.3
+RUN pip install --no-cache-dir python-dateutil==2.8.2
+RUN pip install --no-cache-dir pytz==2022.7
 
-# Copy and install requirements
+# Copy and install requirements (supabase 1.0.3 - older stable version)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
