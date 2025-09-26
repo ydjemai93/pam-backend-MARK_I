@@ -1,5 +1,5 @@
-# Optimized Dockerfile for Railway Deployment
-# Handles Railway-specific requirements and dependency conflicts
+# NUCLEAR APPROACH - 2025-01-10 16:35 - Use supabase 0.7.1 (no storage3)
+# Deployment logs showed even supabase 1.0.3 installs storage3==0.5.3
 
 FROM python:3.12-slim as builder
 
