@@ -1,0 +1,26 @@
+# NUCLEAR REQUIREMENTS - NO SUPABASE CLIENT
+# Direct PostgreSQL connection bypasses all dependency hell
+
+# Core FastAPI and server
+fastapi==0.115.5
+uvicorn[standard]==0.34.2
+pydantic==2.11.3
+pydantic-settings==2.9.1
+
+# HTTP and async
+httpx==0.24.1
+aiofiles==24.1.0
+python-dotenv==1.1.0
+
+# Direct PostgreSQL - NO SUPABASE CLIENT
+psycopg2-binary==2.9.9
+asyncpg==0.29.0
+
+# Essential only
+python-multipart==0.0.2
+typing-extensions==4.13.2
+
+# Security
+cryptography==41.0.7
+
+# NO SUPABASE = NO DEPENDENCY HELL

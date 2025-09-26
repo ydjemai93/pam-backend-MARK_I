@@ -15,8 +15,10 @@ def main():
     railway_port = os.environ.get('PORT', 'NOT_SET')
     print(f"🔥 NUCLEAR MODE: Ignoring Railway PORT={railway_port}")
     print(f"🔥 FORCED PORT: {port}")
+    print(f"🔥 NUCLEAR DB: Direct PostgreSQL (NO Supabase client)")
     print(f"🔧 Current working directory: {os.getcwd()}")
-    print(f"🔧 All ENV vars: {list(os.environ.keys())}")
+    print(f"🔧 ENV vars: SUPABASE_URL={os.environ.get('SUPABASE_URL', 'NOT_SET')[:50]}...")
+    print(f"🔧 ENV vars: SERVICE_KEY={'SET' if os.environ.get('SUPABASE_SERVICE_ROLE_KEY') else 'NOT_SET'}")
     
     # Check if api/main.py exists
     if os.path.exists('api/main.py'):

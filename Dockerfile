@@ -23,8 +23,8 @@ RUN pip install --no-cache-dir six==1.16.0
 RUN pip install --no-cache-dir python-dateutil==2.8.2
 RUN pip install --no-cache-dir pytz==2022.1
 
-# Copy and install requirements
-COPY requirements.txt .
+# Copy and install NUCLEAR requirements (no Supabase client)
+COPY requirements.nuclear.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Production stage
@@ -44,6 +44,10 @@ WORKDIR /app
 
 # Copy application code
 COPY . .
+
+# NUCLEAR MODE: Switch to direct PostgreSQL (bypass Supabase client)
+RUN python switch_nuclear.py
+RUN echo "🔥 NUCLEAR MODE: Switched to direct PostgreSQL"
 
 # Debug: List files to see what was copied
 RUN echo "🔍 Files in /app:" && ls -la
