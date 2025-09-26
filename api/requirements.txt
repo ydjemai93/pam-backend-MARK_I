@@ -1,0 +1,32 @@
+# Core FastAPI and server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# HTTP and async
+httpx==0.25.2
+aiofiles==23.2.1
+python-dotenv==1.0.0
+
+# Database and Supabase - FIXED COMPATIBILITY VERSIONS
+supabase==1.2.0
+postgrest==0.11.0
+python-dateutil==2.8.2
+six==1.16.0
+
+# LiveKit integration
+livekit>=1.0.8
+
+# Additional dependencies
+typing-extensions==4.13.2
+anyio==4.9.0
+jsonschema==4.21.1
+python-multipart==0.0.2
+
+# App Integrations Dependencies
+cryptography==41.0.7
+aiohttp==3.9.1
+
+# Agent Launcher Dependencies
+psutil>=5.9.0
