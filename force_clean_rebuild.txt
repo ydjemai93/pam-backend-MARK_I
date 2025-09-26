@@ -1,4 +1,0 @@
-FORCE CLEAN REBUILD - 2025-01-10 16:15
-This file forces Railway to do a complete clean rebuild
-NO CACHE - CLEAN BUILD
-Fixed supabase installation

@@ -1,0 +1,13 @@
+FINAL FIX - 2025-01-10 16:25
+
+KEY WORKING VERSIONS:
+- python-dateutil==2.9.0.post0  ← CRITICAL: This version fixes six.moves._thread
+- supabase==2.13.0              ← Latest stable  
+- httpx==0.27.0                 ← Compatible with supabase 2.13.0
+- six==1.16.0                   ← Latest
+- pytz==2023.3                  ← Latest
+
+PORT FIXED: User manually set to 8080
+CMD works with proper shell expansion
+
+THIS SHOULD FINALLY WORK!
