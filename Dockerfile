@@ -45,16 +45,25 @@ WORKDIR /app
 # Copy application code
 COPY . .
 
-# Create non-root user for security
-RUN useradd --create-home --shell /bin/bash app && chown -R app:app /app
+# Debug: List files to see what was copied
+RUN echo "🔍 Files in /app:" && ls -la
+
+# Create non-root user for security  
+RUN useradd --create-home --shell /bin/bash app
+
+# Make entrypoint script executable if it exists (optional)
+RUN if [ -f "entrypoint.sh" ]; then chmod +x entrypoint.sh && chown app:app entrypoint.sh; fi
+
+# Switch to non-root user
 USER app
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# Expose port
-EXPOSE $PORT
+# Expose port (Railway will map to $PORT automatically)
+EXPOSE 8000
 
-# Railway-compatible startup command (Railway provides $PORT automatically)
-CMD uvicorn api.main:app --host 0.0.0.0 --port $PORT
+# Alternative: Use inline script if entrypoint.sh fails
+# CMD ["./entrypoint.sh"]
+CMD ["sh", "-c", "PORT=${PORT:-8000}; echo \"🚀 Starting on port $PORT\"; exec uvicorn api.main:app --host 0.0.0.0 --port $PORT"]

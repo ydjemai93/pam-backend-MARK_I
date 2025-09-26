@@ -65,7 +65,7 @@ Thumbs.db
 .git/
 .gitignore
 
-# Railway specific
+# Railway specific (but keep entrypoint.sh)
 *.local.backup.txt
 deploy-*.ps1
 restore-*.ps1
@@ -75,3 +75,6 @@ db_adapter_railway.py
 # Documentation
 *.md
 README*
+
+# EXPLICITLY INCLUDE entrypoint.sh
+!entrypoint.sh
