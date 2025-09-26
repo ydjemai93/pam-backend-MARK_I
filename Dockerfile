@@ -65,8 +65,8 @@ USER app
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# Expose port (Railway will map to $PORT automatically)
-EXPOSE 8000
+# Railway handles port mapping automatically
+# EXPOSE removed - Railway uses its own PORT
 
 # Use Python startup script for bulletproof PORT handling
 CMD ["python", "start.py"]

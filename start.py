@@ -8,13 +8,10 @@ import subprocess
 import sys
 
 def main():
-    # NUCLEAR APPROACH: IGNORE Railway's PORT entirely
-    port = '8000'
+    # USE RAILWAY'S PORT (you're absolutely right!)
+    port = os.environ.get('PORT', '8000')
     
-    # Debug: Show what Railway is actually providing
-    railway_port = os.environ.get('PORT', 'NOT_SET')
-    print(f"🔥 NUCLEAR MODE: Ignoring Railway PORT={railway_port}")
-    print(f"🔥 FORCED PORT: {port}")
+    print(f"🚀 USING Railway PORT: {port}")
     print(f"🔥 NUCLEAR DB: Direct PostgreSQL (NO Supabase client)")
     print(f"🔧 Current working directory: {os.getcwd()}")
     print(f"🔧 ENV vars: SUPABASE_URL={os.environ.get('SUPABASE_URL', 'NOT_SET')[:50]}...")
@@ -27,15 +24,15 @@ def main():
         print("❌ api/main.py not found! Contents:")
         print(os.listdir('.'))
     
-    # Start uvicorn with FORCED port 8000
+    # Start uvicorn with Railway's PORT
     cmd = [
         'uvicorn', 
         'api.main:app', 
         '--host', '0.0.0.0', 
-        '--port', '8000'  # HARD-CODED NO VARIABLES
+        '--port', port  # USE RAILWAY'S PORT!
     ]
     
-    print(f"🚀 NUCLEAR COMMAND: {' '.join(cmd)}")
+    print(f"🚀 USING RAILWAY PORT: {' '.join(cmd)}")
     
     # Use exec to replace the current process
     os.execvp('uvicorn', cmd)

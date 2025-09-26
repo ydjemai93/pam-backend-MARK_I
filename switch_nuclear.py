@@ -25,9 +25,9 @@ def switch_to_nuclear():
         ('from .db_client import supabase_service_client, get_supabase_anon_client', 
          '# from .db_client import supabase_service_client, get_supabase_anon_client  # NUCLEAR: DISABLED'),
         
-        # Add nuclear DB import
+        # Add nuclear DB import (use absolute import to avoid relative import issues)
         ('from .config import BaseModel, get_user_id_from_token',
-         'from .config import BaseModel, get_user_id_from_token\nfrom ..db_nuclear import nuclear_db  # NUCLEAR: ADDED'),
+         'from .config import BaseModel, get_user_id_from_token\nimport sys\nsys.path.append("/app")\nfrom db_nuclear import nuclear_db  # NUCLEAR: ADDED'),
     ]
     
     for old, new in modifications:
