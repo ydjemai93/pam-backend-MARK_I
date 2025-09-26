@@ -1,5 +1,5 @@
-# Optimized Dockerfile for Railway Deployment
-# Handles Railway-specific requirements and dependency conflicts
+# Clean Dockerfile for Railway Deployment - FORCE REBUILD 2025-01-10 16:15
+# Fixed supabase installation and removed all nuclear code
 
 FROM python:3.12-slim as builder
 
@@ -18,14 +18,21 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Upgrade pip and install wheel
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# PRE-INSTALL PROBLEMATIC PACKAGES IN SPECIFIC ORDER
+# FIX FOR SIX.MOVES._THREAD ERROR - WORKING VERSIONS
 RUN pip install --no-cache-dir six==1.16.0
-RUN pip install --no-cache-dir python-dateutil==2.8.2
-RUN pip install --no-cache-dir pytz==2022.1
+RUN pip install --no-cache-dir python-dateutil==2.9.0
+RUN pip install --no-cache-dir pytz==2023.3
 
-# Copy and install NUCLEAR requirements (no Supabase client)
-COPY requirements.nuclear.txt ./requirements.txt
+# FORCE CACHE INVALIDATION - BUILD 2025-01-10-16:15
+RUN echo "Clean build - no cache"
+
+# Copy and install requirements with working versions
+COPY requirements.fixed.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Verify supabase is installed
+RUN python -c "import supabase; print('✅ Supabase installed:', supabase.__version__)"
+RUN pip list | grep -E "(supabase|six|dateutil)"
 
 # Production stage
 FROM python:3.12-slim
@@ -45,18 +52,8 @@ WORKDIR /app
 # Copy application code
 COPY . .
 
-# NUCLEAR MODE: Switch to direct PostgreSQL (bypass Supabase client)
-RUN python switch_nuclear.py
-RUN echo "🔥 NUCLEAR MODE: Switched to direct PostgreSQL"
-
-# Debug: List files to see what was copied
-RUN echo "🔍 Files in /app:" && ls -la
-
 # Create non-root user for security  
-RUN useradd --create-home --shell /bin/bash app
-
-# Make entrypoint script executable if it exists (optional)
-RUN if [ -f "entrypoint.sh" ]; then chmod +x entrypoint.sh && chown app:app entrypoint.sh; fi
+RUN useradd --create-home --shell /bin/bash app && chown -R app:app /app
 
 # Switch to non-root user
 USER app
@@ -65,8 +62,8 @@ USER app
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# Railway handles port mapping automatically
-# EXPOSE removed - Railway uses its own PORT
+# Railway handles port mapping automatically  
+EXPOSE 8000
 
-# Use Python startup script for bulletproof PORT handling
-CMD ["python", "start.py"]
+# Simple CMD that works - Railway provides $PORT
+CMD uvicorn api.main:app --host 0.0.0.0 --port $PORT

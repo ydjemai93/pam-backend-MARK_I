@@ -1,5 +1,0 @@
-FORCE REBUILD - 2025-01-10 15:45
-FIXED: Now using Railway's PORT properly (not forcing 8000)
-FIXED: Nuclear DB import error resolved
-Railway PORT: 8080 (as it should be!)
-Nuclear solution: Direct PostgreSQL, no Supabase client
