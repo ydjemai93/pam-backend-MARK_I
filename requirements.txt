@@ -9,31 +9,23 @@ httpx==0.24.1
 aiofiles==24.1.0
 python-dotenv==1.1.0
 
-# Database and Supabase - FIXED VERSIONS FOR RAILWAY
-supabase==2.8.0
-postgrest==0.16.11
-storage3==0.7.7
-realtime==1.0.6
-gotrue==2.7.1
+# Database and Supabase - WORKING VERSIONS FOR RAILWAY
+supabase==1.0.3
+postgrest==0.10.2
 
 # LiveKit integration
 livekit>=1.0.8
 
-# Date/time handling - EXPLICIT COMPATIBLE VERSIONS
+# Date/time handling - RAILWAY COMPATIBLE VERSIONS
 six==1.16.0
-python-dateutil==2.9.0.post0
-pytz==2024.1
-tzdata==2024.1
+python-dateutil==2.8.2
+pytz==2022.1
 
 # Additional dependencies
 typing-extensions==4.13.2
 anyio==4.9.0
 jsonschema==4.21.1
 python-multipart==0.0.2
-
-# Fix for Railway/Nixpacks compatibility
-setuptools>=65.0.0
-wheel>=0.37.0
 
 # App Integrations Dependencies
 cryptography>=3.4.8
