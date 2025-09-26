@@ -64,6 +64,5 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Expose port (Railway will map to $PORT automatically)
 EXPOSE 8000
 
-# Alternative: Use inline script if entrypoint.sh fails
-# CMD ["./entrypoint.sh"]
-CMD ["sh", "-c", "PORT=${PORT:-8000}; echo \"🚀 Starting on port $PORT\"; exec uvicorn api.main:app --host 0.0.0.0 --port $PORT"]
+# Use Python startup script for bulletproof PORT handling
+CMD ["python", "start.py"]
