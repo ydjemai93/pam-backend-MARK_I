@@ -16,6 +16,11 @@ postgrest==0.11.0
 # LiveKit integration
 livekit>=1.0.8
 
+# Date/time handling - FIX FOR RAILWAY DEPLOYMENT
+six>=1.16.0
+python-dateutil>=2.8.2
+pytz>=2021.1
+
 # Additional dependencies
 typing-extensions==4.13.2
 anyio==4.9.0
