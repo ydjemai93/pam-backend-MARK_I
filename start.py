@@ -1,28 +1,22 @@
 #!/usr/bin/env python3
 """
-Railway startup script for FastAPI
-Handles PORT environment variable properly
+Railway startup script for FastAPI - NUCLEAR VERSION
+Forces port 8000 and ignores Railway's broken $PORT
 """
 import os
 import subprocess
 import sys
 
 def main():
-    # Get PORT from environment, default to 8000
-    port = os.environ.get('PORT', '8000')
+    # NUCLEAR APPROACH: IGNORE Railway's PORT entirely
+    port = '8000'
     
-    # Validate port is numeric
-    try:
-        port_int = int(port)
-        if port_int < 1 or port_int > 65535:
-            raise ValueError("Port out of range")
-    except ValueError:
-        print(f"❌ Invalid PORT value: {port}, using default 8000")
-        port = '8000'
-    
-    print(f"🚀 Starting FastAPI app on port {port}")
+    # Debug: Show what Railway is actually providing
+    railway_port = os.environ.get('PORT', 'NOT_SET')
+    print(f"🔥 NUCLEAR MODE: Ignoring Railway PORT={railway_port}")
+    print(f"🔥 FORCED PORT: {port}")
     print(f"🔧 Current working directory: {os.getcwd()}")
-    print(f"🔧 Environment variables loaded: {len([k for k in os.environ.keys() if k.startswith(('SUPABASE', 'RAILWAY', 'PORT'))])}")
+    print(f"🔧 All ENV vars: {list(os.environ.keys())}")
     
     # Check if api/main.py exists
     if os.path.exists('api/main.py'):
@@ -31,15 +25,15 @@ def main():
         print("❌ api/main.py not found! Contents:")
         print(os.listdir('.'))
     
-    # Start uvicorn
+    # Start uvicorn with FORCED port 8000
     cmd = [
         'uvicorn', 
         'api.main:app', 
         '--host', '0.0.0.0', 
-        '--port', port
+        '--port', '8000'  # HARD-CODED NO VARIABLES
     ]
     
-    print(f"🚀 Executing: {' '.join(cmd)}")
+    print(f"🚀 NUCLEAR COMMAND: {' '.join(cmd)}")
     
     # Use exec to replace the current process
     os.execvp('uvicorn', cmd)
