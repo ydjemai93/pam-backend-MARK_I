@@ -1,0 +1,26 @@
+# Railway-Optimized Requirements - Minimal Working Set
+# Created specifically for Railway deployment to avoid dependency conflicts
+
+# Core FastAPI and server
+fastapi==0.115.5
+uvicorn[standard]==0.34.2
+pydantic==2.11.3
+pydantic-settings==2.9.1
+
+# HTTP and async - Compatible with supabase 1.0.3
+httpx==0.23.3
+aiofiles==24.1.0
+python-dotenv==1.1.0
+
+# Database - Lightweight Supabase setup for Railway
+supabase==1.0.3
+
+# Essential only - Minimal footprint
+python-multipart==0.0.2
+typing-extensions==4.13.2
+
+# Security
+cryptography==41.0.7
+
+# Note: LiveKit and other heavy dependencies excluded for Railway deployment
+# Add back individually as needed after successful deployment
