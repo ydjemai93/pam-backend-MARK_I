@@ -1,32 +1,25 @@
-# Vercel-Optimized Requirements - Serverless Functions
-# Lighter dependencies that work better in serverless environment
+# Vercel-Optimized Requirements - MINIMAL FOR SERVERLESS
+# Avoid six.moves._thread issues entirely
 
-# Core FastAPI and server
+# Core FastAPI and server  
 fastapi==0.115.5
 pydantic==2.11.3
-pydantic-settings==2.9.1
 
-# HTTP client - lighter version
+# ASGI adapter for serverless (CRITICAL)
+mangum==0.17.0
+
+# HTTP client - minimal version
 httpx==0.24.1
 python-dotenv==1.1.0
 
-# Database - try newer supabase (serverless handles dependencies better)
-supabase==2.13.0
+# Database - try older supabase to avoid storage3
+supabase==0.7.1
 
-# Essential only - keep it minimal for serverless
+# Minimal essentials only
 python-multipart==0.0.2
 typing-extensions==4.13.2
 
-# Async support
-anyio==4.9.0
-
-# JSON handling
-jsonschema==4.21.1
-
-# Security (required)
-cryptography>=3.4.8
-
-# NOTE: Removed heavy dependencies that might cause issues:
-# - livekit (too heavy for serverless)
-# - aiohttp (not needed if using httpx)
-# - psutil (system-level, not needed in serverless)
+# NOTE: Removed ALL heavy dependencies for serverless:
+# - No livekit, aiohttp, psutil, cryptography, anyio, jsonschema
+# - No pydantic-settings (use basic settings)
+# - Minimal footprint to avoid import errors
