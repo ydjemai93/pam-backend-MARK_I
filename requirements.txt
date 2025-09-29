@@ -1,25 +1,37 @@
-# Vercel-Optimized Requirements - MINIMAL FOR SERVERLESS
-# Avoid six.moves._thread issues entirely
+# Railway Requirements - BACK TO CONTAINERS
+# Full functionality with container support
 
-# Core FastAPI and server  
+# Core FastAPI and server
 fastapi==0.115.5
+uvicorn[standard]==0.34.2
 pydantic==2.11.3
+pydantic-settings==2.9.1
 
-# ASGI adapter for serverless (CRITICAL)
-mangum==0.17.0
-
-# HTTP client - minimal version
+# HTTP and async
 httpx==0.24.1
+aiofiles==24.1.0
 python-dotenv==1.1.0
 
-# Database - try older supabase to avoid storage3
-supabase==0.7.1
+# Database - NO SUPABASE (avoid dependency hell entirely)
+# Use direct PostgreSQL connection instead
+psycopg2-binary==2.9.9
+asyncpg==0.29.0
 
-# Minimal essentials only
-python-multipart==0.0.2
+# LiveKit integration
+livekit>=1.0.8
+
+# Additional dependencies
 typing-extensions==4.13.2
+anyio==4.9.0
+jsonschema==4.21.1
+python-multipart==0.0.2
 
-# NOTE: Removed ALL heavy dependencies for serverless:
-# - No livekit, aiohttp, psutil, cryptography, anyio, jsonschema
-# - No pydantic-settings (use basic settings)
-# - Minimal footprint to avoid import errors
+# App Integrations Dependencies
+cryptography>=3.4.8
+aiohttp>=3.8.0
+
+# Agent Launcher Dependencies
+psutil>=5.9.0
+
+# REMOVED: supabase (causing all the dependency conflicts)
+# NOTE: You'll need to update code to use direct PostgreSQL instead
