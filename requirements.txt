@@ -1,5 +1,5 @@
-# Railway Requirements - BACK TO CONTAINERS
-# Full functionality with container support
+# Unified Requirements for PAM Backend
+# This file consolidates dependencies from the root, api, and agents directories.
 
 # Core FastAPI and server
 fastapi==0.115.5
@@ -11,27 +11,28 @@ pydantic-settings==2.9.1
 httpx==0.24.1
 aiofiles==24.1.0
 python-dotenv==1.1.0
+aiohttp>=3.8.0
+requests>=2.31.0
 
-# Database - NO SUPABASE (avoid dependency hell entirely)
-# Use direct PostgreSQL connection instead
+# Database and Supabase
+# Using >=2.0.0 from agents requirements as it is newer
+supabase>=2.0.0
+postgrest==0.11.0
 psycopg2-binary==2.9.9
 asyncpg==0.29.0
 
-# LiveKit integration
+# LiveKit
 livekit>=1.0.8
+livekit-agents[openai,deepgram,cartesia,silero,turn_detector]>=1.0.0
 
-# Additional dependencies
-typing-extensions==4.13.2
-anyio==4.9.0
+# App Integrations & Utilities
+# Using >=41.0.0 from agents requirements
+cryptography>=41.0.0
+psutil>=5.9.0
+python-dateutil~=2.9.0
 jsonschema==4.21.1
 python-multipart==0.0.2
+typing-extensions==4.13.2
+anyio==4.9.0
 
-# App Integrations Dependencies
-cryptography>=3.4.8
-aiohttp>=3.8.0
 
-# Agent Launcher Dependencies
-psutil>=5.9.0
-
-# REMOVED: supabase (causing all the dependency conflicts)
-# NOTE: You'll need to update code to use direct PostgreSQL instead
