@@ -123,6 +123,8 @@ origins = [
     "http://localhost:5174", # Port alternatif de Vite
     "http://127.0.0.1:5173",
     "http://127.0.0.1:5174",
+    "https://pam-frontend-cli.vercel.app",  # Production frontend
+    os.getenv("FRONTEND_URL", ""),  # Dynamic frontend URL from environment
     # Ajoutez d'autres origines si nécessaire (ex: preview de déploiement)
 ]
 
