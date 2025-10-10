@@ -266,10 +266,43 @@ logger.info(f"Encodage par défaut: {sys.getdefaultencoding()}")
 logger.info(f"Locale système: {locale.getlocale()}")
 
 # Load environment variables from .env files
+# Priority order: .env (agents/) > .env.local > ../api/.env
+# Load API environment first (for OAuth encryption key if not in agents/.env)
+load_dotenv(find_dotenv('../api/.env'), override=False)
+# Load local overrides
 load_dotenv(find_dotenv('.env.local'), override=True)
+# Load primary agent configuration LAST (highest priority)
 load_dotenv(find_dotenv('.env'), override=True)
-# Load API environment for OAuth encryption key (must match backend)
-load_dotenv(find_dotenv('../api/.env'), override=True)
+
+# ============================================================
+# LiveKit Inference Mode Configuration (NEW - 2025)
+# ============================================================
+# Feature flag to toggle between Inference API and direct plugins
+# - Inference mode (true): Unified API, 200-350ms lower latency, only LIVEKIT_API_KEY needed
+# - Plugin mode (false): Direct provider APIs, requires all provider keys
+USE_LIVEKIT_INFERENCE = os.getenv('USE_LIVEKIT_INFERENCE', 'false').lower() in ('true', '1', 'yes', 'on')
+
+# ============================================================
+# Baseten Integration Configuration (NEW - 2025)
+# ============================================================
+# Feature flags for Baseten models (highest priority for latency optimization)
+USE_BASETEN_STT = os.getenv('USE_BASETEN_STT', 'false').lower() in ('true', '1', 'yes', 'on')
+USE_BASETEN_LLM = os.getenv('USE_BASETEN_LLM', 'false').lower() in ('true', '1', 'yes', 'on')
+
+logger.info(f"🚀 LiveKit Inference Mode: {'✅ ENABLED' if USE_LIVEKIT_INFERENCE else '❌ DISABLED (using legacy plugins)'}")
+logger.info(f"🚀 Baseten STT Mode: {'✅ ENABLED' if USE_BASETEN_STT else '❌ DISABLED'}")
+logger.info(f"🚀 Baseten LLM Mode: {'✅ ENABLED' if USE_BASETEN_LLM else '❌ DISABLED'}")
+
+if USE_BASETEN_STT or USE_BASETEN_LLM:
+    logger.info("   → Baseten Benefits: Ultra-low latency, dedicated L4 GPUs, custom model optimizations")
+    logger.info("   → Required: BASETEN_API_KEY")
+
+if USE_LIVEKIT_INFERENCE:
+    logger.info("   → LiveKit Inference Benefits: Lower latency, simplified auth, EU routing optimization")
+    logger.info("   → Required: LIVEKIT_API_KEY only")
+else:
+    logger.info("   → Legacy mode: Direct provider plugins")
+    logger.info("   → Required: OPENAI_API_KEY, DEEPGRAM_API_KEY, CARTESIA_API_KEY, ELEVENLABS_API_KEY")
 
 # Remove these lines that load from environment
 # outbound_trunk_id = os.getenv("SIP_OUTBOUND_TRUNK_ID")
@@ -313,12 +346,17 @@ from livekit.agents import (
     metrics,
     MetricsCollectedEvent,
 )
+# LiveKit AI Model Imports - Dual Mode Support
+# NEW: Inference API for unified model access (lower latency, simplified auth)
+from livekit.agents import inference
+# LEGACY: Direct provider plugins (fallback mode)
 from livekit.plugins import (
-    openai,
-    cartesia,
-    elevenlabs,
-    silero,
-    deepgram,
+    openai,      # Plugin mode: Direct OpenAI LLM integration
+    cartesia,    # Plugin mode: Direct Cartesia TTS integration
+    elevenlabs,  # Plugin mode: Direct ElevenLabs TTS integration (custom voice cloning)
+    silero,      # Used in both modes: Voice Activity Detection (VAD)
+    deepgram,    # Plugin mode: Direct Deepgram STT integration
+    baseten,     # NEW: Baseten plugin for custom L4 GPU models (STT + LLM)
 )
 from livekit.agents.llm import ChatMessage
 from pydantic import BaseModel, Field
@@ -548,7 +586,9 @@ class OutboundCaller(Agent):
         logger.info("--- End Agent System Prompt ---")
 
         # Passer le prompt reçu au constructeur parent
-        super().__init__(instructions=instructions)
+        super().__init__(
+            instructions=instructions,
+        )
         
         # Store the name for use in methods
         self.name = name
@@ -1187,63 +1227,271 @@ async def entrypoint(ctx: JobContext):
     voice_model = voice_config["model"]
     voice_name = voice_config["voice_name"]
     
-    if tts_provider == "elevenlabs":
-        print(f"🎙️ Using ElevenLabs TTS with voice: {voice_name} ({voice_id}) - {voice_language}", flush=True)
+    # ========================================
+    # TTS CONFIGURATION - DUAL MODE SUPPORT
+    # ========================================
+    if USE_LIVEKIT_INFERENCE:
+        # NEW: LiveKit Inference mode - Unified API with lower latency
+        print(f"🚀 [INFERENCE] Using LiveKit Inference for TTS: {tts_provider}", flush=True)
+        print(f"   Voice: {voice_name} ({voice_id}) - {voice_language}", flush=True)
         
-        # Configure ElevenLabs voice settings - Optimized for natural human-like speech
-        voice_settings = elevenlabs.VoiceSettings(
-            stability=0.35,         # 35% stability (more natural variation, less robotic)
-            similarity_boost=0.55,  # 55% similarity (less rigid matching)
-            style=0.6,              # 60% style (more expressive, human-like)
-            use_speaker_boost=True, # Enhanced clarity
-            speed=1.05              # 105% speed (slightly faster, conversational)
-        )
-        
-        tts = elevenlabs.TTS(
-            voice_id=voice_id,
-            model=voice_model,  # Use dynamic model from voice config
-            voice_settings=voice_settings
-        )
+        if tts_provider == "elevenlabs":
+            # Inference supports ElevenLabs
+            tts = inference.TTS(
+                model=f"elevenlabs/{voice_model}",
+                voice=voice_id,
+            )
+        else:  # cartesia
+            # Determine model for Inference
+            if voice_language == "fr":
+                final_cartesia_model = "sonic-turbo"  # Inference model naming
+                print(f"   → Using Cartesia Sonic Turbo for French", flush=True)
+            else:
+                # Map plugin model names to Inference model names
+                if voice_model in ["sonic-2", "sonic-2-2025-03-07"]:
+                    final_cartesia_model = "sonic-2"
+                elif "turbo" in voice_model.lower():
+                    final_cartesia_model = "sonic-turbo"
+                else:
+                    final_cartesia_model = "sonic-2"  # Default
+            
+            tts = inference.TTS(
+                model=f"cartesia/{final_cartesia_model}",
+                voice=voice_id,
+                language=voice_language
+            )
+        print(f"   ✅ Inference TTS configured: {tts_provider}", flush=True)
     else:
-        # Use Cartesia with sonic-turbo for French language
-        print(f"🎙️ Using Cartesia TTS with voice: {voice_name} ({voice_id}) - {voice_language}", flush=True)
-        # Use sonic-turbo for French language, upgrade other models if needed
-        if voice_language == "fr":
-            final_cartesia_model = "sonic-turbo-2025-03-07"  # Turbo model for French
-            print(f"🚀 Using Cartesia Sonic Turbo for French: {final_cartesia_model}", flush=True)
-        else:
-            final_cartesia_model = voice_model
-            if final_cartesia_model == "sonic-2":
-                final_cartesia_model = "sonic-2-2025-03-07"
+        # LEGACY: Plugin mode - Direct provider integration
+        print(f"🔌 [PLUGIN] Using legacy plugin for TTS: {tts_provider}", flush=True)
         
-        tts = cartesia.TTS(
-            model=final_cartesia_model,
-            voice=voice_id,
-            language=voice_language
+        if tts_provider == "elevenlabs":
+            print(f"🎙️ Using ElevenLabs TTS with voice: {voice_name} ({voice_id}) - {voice_language}", flush=True)
+            
+            # Configure ElevenLabs voice settings - Optimized for natural human-like speech
+            voice_settings = elevenlabs.VoiceSettings(
+                stability=0.35,         # 35% stability (more natural variation, less robotic)
+                similarity_boost=0.55,  # 55% similarity (less rigid matching)
+                style=0.6,              # 60% style (more expressive, human-like)
+                use_speaker_boost=True, # Enhanced clarity
+                speed=1.05              # 105% speed (slightly faster, conversational)
+            )
+            
+            tts = elevenlabs.TTS(
+                voice_id=voice_id,
+                model=voice_model,  # Use dynamic model from voice config
+                voice_settings=voice_settings
+            )
+        else:  # cartesia
+            # Use Cartesia with sonic-turbo for French language
+            print(f"🎙️ Using Cartesia TTS with voice: {voice_name} ({voice_id}) - {voice_language}", flush=True)
+            # Use sonic-turbo for French language, upgrade other models if needed
+            if voice_language == "fr":
+                final_cartesia_model = "sonic-turbo-2025-03-07"  # Turbo model for French
+                print(f"🚀 Using Cartesia Sonic Turbo for French: {final_cartesia_model}", flush=True)
+            else:
+                final_cartesia_model = voice_model
+                if final_cartesia_model == "sonic-2":
+                    final_cartesia_model = "sonic-2-2025-03-07"
+            
+            tts = cartesia.TTS(
+                model=final_cartesia_model,
+                voice=voice_id,
+                language=voice_language
+            )
+        print(f"   ✅ Plugin TTS configured: {tts_provider}", flush=True)
+    
+    # ========================================
+    # STT CONFIGURATION - BASETEN + DUAL MODE SUPPORT
+    # ========================================
+    if USE_BASETEN_STT:
+        # BASETEN: Whisper Large v3 Turbo with faster-whisper (OPTIMIZED FOR REAL-TIME)
+        print(f"🚀 [BASETEN] Using Whisper Turbo v3 for STT (faster-whisper + Silero VAD)", flush=True)
+        
+        stt = baseten.STT(
+            model_endpoint="wss://model-yqvo70rw.api.baseten.co/v1/websocket",  # Whisper Turbo v3 with faster-whisper
+            language="fr",  # French language support
+            buffer_size_seconds=0.5,  # Match Whisper's chunk size (0.5s)
+            vad_threshold=0.5,  # Voice activity detection threshold
+            vad_min_silence_duration_ms=100,  # MUCH shorter silence for faster EOU detection
+            vad_speech_pad_ms=30  # Speech padding in milliseconds
         )
+        print(f"   ✅ Baseten STT configured: whisper-turbo-v3-french-streaming (yqvo70rw)", flush=True)
+        
+    elif USE_LIVEKIT_INFERENCE:
+        # NEW: LiveKit Inference mode - Deepgram via Inference API
+        print(f"🚀 [INFERENCE] Using LiveKit Inference for STT: Deepgram Nova-3 (French)", flush=True)
+        stt = inference.STT(
+            model="deepgram/nova-3",  # Nova-3 with improved French support
+            language="fr",             # French language
+            extra_kwargs={
+                "endpointing": 25,     # ULTRA-AGGRESSIVE endpointing for maximum speed (25ms)
+                                       # ⚠️ WARNING: May cut off natural speech pauses
+                                       # Testing for minimum possible response time
+            }
+        )
+        print(f"   ✅ Inference STT configured: Deepgram Nova-3 (fr)", flush=True)
+    else:
+        # PLUGIN MODE: Deepgram Nova-3 with French language support
+        # Nova-3 offers 14.26% better WER for French vs Nova-2
+        # Reference: https://deepgram.com/learn/deepgram-expands-nova-3-with-spanish-french-and-portuguese-support
+        print(f"🚀 [DEEPGRAM NOVA-3] Using Nova-3 with French language support", flush=True)
+        stt = deepgram.STT(
+            model="nova-3",              # Deepgram's latest multilingual model
+            language="fr",               # French language
+            sample_rate=16000,           # Standard sample rate
+        )
+        print(f"   ✅ Nova-3 configured: model=nova-3, language=fr (French)", flush=True)
     
-    # Configure STT with Deepgram Nova-3 - OPTIMIZED FOR SPEED & FRENCH  
-    stt = deepgram.STT(
-        model="nova-3",  # Deepgram's fastest and most accurate model (54% better than nova-2)
-        language="fr",   # French language
-        endpointing_ms=50,   # ULTRA-aggressive endpointing for speed (reduced from 100ms)
-    )
-    
-    # Configure LLM (Large Language Model) - USING GPT-4O-MINI
+    # ========================================
+    # LLM CONFIGURATION - BASETEN + DUAL MODE SUPPORT
+    # ========================================
     llm_config = ai_models.get("llm", {})
-    # Create pathway LLM (with tools support)
-    pathway_llm = openai.LLM(
-        model=llm_config.get("model", "gpt-4o-mini"),  # GPT-4o-mini for better performance
-        parallel_tool_calls=False,  # ✅ CRITICAL: Required for workflow agents with function tools
-        temperature=llm_config.get("temperature", 0.1),  # ULTRA-LOW temp for speed (reduced from 0.3)
-        # Note: LiveKit OpenAI LLM automatically handles streaming and token limits
-    )
-    # Create fallback LLM (without tools support) 
-    fallback_llm = openai.LLM(
-        model=llm_config.get("model", "gpt-4o-mini"),  # GPT-4o-mini for better performance
-        temperature=llm_config.get("temperature", 0.1),  # ULTRA-LOW temp for speed (reduced from 0.3)
-        # Note: No parallel_tool_calls parameter for agents without tools
-    )
+    
+    # LLM Model Selection:
+    # - Baseten mode: Use Llama 3.1 8B Instruct on T4 GPU (HIGHEST PRIORITY - fast, high quality)
+    # - Inference mode: Use GPT-5-nano (fastest OpenAI via Inference)
+    # - Plugin mode: FORCE llama-3.3-70b (Cerebras for ultra-low latency)
+    
+    if USE_BASETEN_LLM:
+        llm_model = "llama-3.1-8b-instruct-french"  # Your custom Baseten model
+        llm_provider = "baseten"
+        print(f"🚀 [BASETEN] Using Llama 3.1 8B Instruct for optimal latency", flush=True)
+    elif USE_LIVEKIT_INFERENCE:
+        llm_model = "gpt-5-nano"  # Force GPT-5-nano for Inference mode
+        llm_provider = "inference"
+        print(f"🚀 [INFERENCE] Using GPT-5-nano for optimal latency", flush=True)
+    else:
+        # Plugin mode - FORCE Cerebras (override database config)
+        llm_model = "llama-3.3-70b"  # ALWAYS use Cerebras Llama 3.3 70B for world's fastest inference
+        llm_provider = "plugin"
+        print(f"🚀 [PLUGIN] Forcing Cerebras Llama 3.3 70B (overriding DB config)", flush=True)
+    
+    llm_temperature = llm_config.get("temperature", 0.1)
+    
+    if USE_BASETEN_LLM:
+        # BASETEN MODE: Llama 3.1 8B Instruct on T4 GPU (HIGHEST PRIORITY - fast, high quality)
+        print(f"🚀 [BASETEN] Using Baseten for LLM: {llm_model} (model name: llama-3.1-8b-instruct-french)", flush=True)
+        
+        try:
+            # Create pathway LLM (with tools support)
+            pathway_llm = baseten.LLM(
+                model="llama-3.1-8b-instruct-french"  # Model name from Baseten Model API
+            )
+            
+            # Create fallback LLM (without tools support) 
+            fallback_llm = baseten.LLM(
+                model="llama-3.1-8b-instruct-french"  # Model name from Baseten Model API
+            )
+            print(f"   ✅ Baseten LLM configured: {llm_model} (T4 GPU, BitsAndBytes 4-bit)", flush=True)
+            
+        except Exception as e:
+            # Auto-fallback to Cerebras if Baseten fails
+            logger.error(f"❌ Failed to initialize Baseten LLM: {e}. Auto-falling back to Cerebras.")
+            print(f"⚠️  Baseten LLM failed, using Cerebras fallback", flush=True)
+            
+            cerebras_api_key = os.getenv('CEREBRAS_API_KEY', '')
+            if cerebras_api_key:
+                pathway_llm = openai.LLM.with_cerebras(
+                    model="llama-3.3-70b",
+                    api_key=cerebras_api_key,
+                )
+                fallback_llm = openai.LLM.with_cerebras(
+                    model="llama-3.3-70b",
+                    api_key=cerebras_api_key,
+                )
+            else:
+                pathway_llm = openai.LLM(model="gpt-4o-mini", parallel_tool_calls=False, temperature=llm_temperature)
+                fallback_llm = openai.LLM(model="gpt-4o-mini", temperature=llm_temperature)
+            
+    elif USE_LIVEKIT_INFERENCE:
+        # INFERENCE MODE: LiveKit Inference API - OpenAI, Google, etc.
+        # Auto-detect provider from model name
+        if "gemini" in llm_model.lower():
+            model_provider = "google"
+        elif "gpt" in llm_model.lower() or "openai" in llm_model.lower():
+            model_provider = "openai"
+        elif "deepseek" in llm_model.lower():
+            model_provider = "deepseek"
+        else:
+            model_provider = "openai"  # Default to OpenAI
+        
+        print(f"🚀 [INFERENCE] Using LiveKit Inference for LLM: {model_provider}/{llm_model}", flush=True)
+        
+        try:
+            # Create pathway LLM (with tools support)
+            # Note: Inference LLM doesn't support temperature parameter - controlled server-side
+            pathway_llm = inference.LLM(
+                model=f"{model_provider}/{llm_model}",
+                # temperature not supported in Inference API
+            )
+            
+            # Create fallback LLM (without tools support)
+            fallback_llm = inference.LLM(
+                model=f"{model_provider}/{llm_model}",
+                # temperature not supported in Inference API
+            )
+            print(f"   ✅ Inference LLM configured: {model_provider}/{llm_model} (optimized for low latency)", flush=True)
+            
+        except Exception as e:
+            # Auto-fallback to plugin mode if Inference fails
+            logger.error(f"❌ Failed to initialize Inference LLM: {e}. Auto-falling back to plugin mode.")
+            print(f"⚠️  Inference LLM failed, using plugin fallback", flush=True)
+            
+            pathway_llm = openai.LLM(
+                model=llm_model,
+                parallel_tool_calls=False,
+                temperature=llm_temperature,
+            )
+            fallback_llm = openai.LLM(
+                model=llm_model,
+                temperature=llm_temperature,
+            )
+    else:
+        # PLUGIN MODE: Direct provider integration (OpenAI, Cerebras, etc.)
+        # Auto-detect provider from model name
+        if "llama" in llm_model.lower():
+            # Cerebras model (Llama)
+            print(f"🚀 [CEREBRAS PLUGIN] Using Cerebras for LLM: {llm_model}", flush=True)
+            cerebras_api_key = os.getenv('CEREBRAS_API_KEY', '')
+            
+            if cerebras_api_key:
+                try:
+                    pathway_llm = openai.LLM.with_cerebras(
+                        model=llm_model,
+                        api_key=cerebras_api_key,
+                    )
+                    fallback_llm = openai.LLM.with_cerebras(
+                        model=llm_model,
+                        api_key=cerebras_api_key,
+                    )
+                    print(f"   ✅ Cerebras LLM configured: {llm_model} (world's fastest inference)", flush=True)
+                except Exception as e:
+                    logger.error(f"❌ Failed to initialize Cerebras: {e}. Falling back to GPT-4o-mini.")
+                    # Fallback to GPT-4o-mini
+                    llm_model = "gpt-4o-mini"
+                    pathway_llm = openai.LLM(model=llm_model, parallel_tool_calls=False, temperature=llm_temperature)
+                    fallback_llm = openai.LLM(model=llm_model, temperature=llm_temperature)
+                    print(f"   ✅ Fallback LLM configured: {llm_model}", flush=True)
+            else:
+                logger.warning(f"⚠️  Cerebras model '{llm_model}' requires CEREBRAS_API_KEY. Falling back to GPT-4o-mini.")
+                llm_model = "gpt-4o-mini"
+                pathway_llm = openai.LLM(model=llm_model, parallel_tool_calls=False, temperature=llm_temperature)
+                fallback_llm = openai.LLM(model=llm_model, temperature=llm_temperature)
+                print(f"   ✅ Fallback LLM configured: {llm_model}", flush=True)
+        else:
+            # OpenAI model (GPT-4o-mini, etc.)
+            print(f"🔌 [OPENAI PLUGIN] Using OpenAI for LLM: {llm_model}", flush=True)
+            pathway_llm = openai.LLM(
+                model=llm_model,
+                parallel_tool_calls=False,  # Required for workflow agents with function tools
+                temperature=llm_temperature,
+            )
+            fallback_llm = openai.LLM(
+                model=llm_model,
+                temperature=llm_temperature,
+            )
+            print(f"   ✅ OpenAI LLM configured: {llm_model} (temp={llm_temperature})", flush=True)
     
     # Use pathway_llm as default for backwards compatibility
     llm = pathway_llm
@@ -1392,7 +1640,9 @@ async def entrypoint(ctx: JobContext):
             if agent_greeting:
                 class FallbackAgentWithGreeting(Agent):
                     def __init__(self, instructions, greeting):
-                        super().__init__(instructions=instructions)
+                        super().__init__(
+                            instructions=instructions,
+                        )
                         self.greeting = greeting
                     
                     async def on_enter(self):
@@ -1406,7 +1656,9 @@ async def entrypoint(ctx: JobContext):
                 session_start_agent = FallbackAgentWithGreeting(agent_instructions, agent_greeting)
                 logger.info(f"✅ Created fallback agent with greeting: {agent_greeting}")
             else:
-                session_start_agent = Agent(instructions=agent_instructions)
+                session_start_agent = Agent(
+                    instructions=agent_instructions,
+                )
                 logger.info(f"✅ Created fallback agent without greeting")
         else:
             logger.info(f"✅ Fetched pathway config for call_id {call_id}")
@@ -1510,14 +1762,41 @@ async def entrypoint(ctx: JobContext):
         
         # Handle specific metric types
         if isinstance(metric, metrics.STTMetrics):
+            # Enhanced STT metrics with Flux-specific deep-dive
             logger.info(f"📊 STT Metrics - speech_id: {speech_id}, "
                        f"audio_duration: {metric.audio_duration:.3f}s, "
                        f"duration: {metric.duration:.3f}s, streamed: {metric.streamed}")
+            
+            # FLUX DEEP-DIVE: Log detailed timing breakdown
+            if hasattr(metric, 'duration') and metric.duration > 0:
+                # Calculate effective transcription rate
+                if metric.audio_duration > 0:
+                    rt_factor = metric.audio_duration / metric.duration if metric.duration > 0 else 0
+                    logger.info(f"   🔬 [FLUX DETAIL] Transcription RT factor: {rt_factor:.2f}x "
+                               f"(processed {metric.audio_duration:.2f}s audio in {metric.duration:.2f}s)")
+            
+            # Log if this is a Flux v2 STT vs legacy STT
+            stt_model = "Flux v2" if USE_LIVEKIT_INFERENCE == False else "Inference"
+            logger.info(f"   🔬 [FLUX DETAIL] Model: {stt_model}, Streaming: {metric.streamed}")
         
         elif isinstance(metric, metrics.EOUMetrics):
             logger.info(f"📊 EOU Metrics - speech_id: {speech_id}, "
                        f"transcription_delay: {metric.transcription_delay:.3f}s, "
                        f"end_of_utterance_delay: {metric.end_of_utterance_delay:.3f}s")
+            
+            # FLUX DEEP-DIVE: Compare to Deepgram's advertised ~260ms EOU detection
+            eou_ms = metric.end_of_utterance_delay * 1000
+            target_ms = 260  # Deepgram Flux advertised EOU latency
+            
+            if eou_ms <= target_ms:
+                status = "✅ ON TARGET"
+            elif eou_ms <= target_ms * 1.5:
+                status = "⚠️ SLIGHTLY SLOWER"
+            else:
+                status = "❌ SLOWER THAN EXPECTED"
+            
+            logger.info(f"   🔬 [FLUX EOU] {eou_ms:.0f}ms vs {target_ms}ms target → {status}")
+            logger.info(f"   🔬 [FLUX EOU] Transcription appeared after {metric.transcription_delay*1000:.0f}ms")
         
         elif isinstance(metric, metrics.LLMMetrics):
             # Enhanced LLM metrics logging per LiveKit docs
@@ -1577,6 +1856,23 @@ async def entrypoint(ctx: JobContext):
                            f"Total_Latency={turn_summary['total_conversation_latency']:.3f}s, "
                            f"Tokens={completion_tokens}/{total_tokens} @{tokens_per_sec:.1f}tok/s, "
                            f"TTS={tts_characters}chars @{tts_char_per_sec:.1f}c/s, streamed={tts_streamed}")
+                
+                # FLUX DEEP-DIVE: Detailed latency analysis
+                total_latency_ms = turn_summary['total_conversation_latency'] * 1000
+                stt_latency_ms = turn_summary['stt_final_latency'] * 1000
+                llm_ttft_ms = turn_summary['llm_ttft'] * 1000
+                tts_ttfb_ms = turn_summary['tts_ttfb'] * 1000
+                
+                logger.info(f"   🔬 [FLUX ANALYSIS] Total Response Time: {total_latency_ms:.0f}ms breakdown:")
+                logger.info(f"      • STT (Flux EOU): {stt_latency_ms:.0f}ms ({stt_latency_ms/total_latency_ms*100:.1f}%)")
+                logger.info(f"      • LLM (Cerebras TTFT): {llm_ttft_ms:.0f}ms ({llm_ttft_ms/total_latency_ms*100:.1f}%)")
+                logger.info(f"      • TTS (Cartesia TTFB): {tts_ttfb_ms:.0f}ms ({tts_ttfb_ms/total_latency_ms*100:.1f}%)")
+                
+                # Identify bottleneck
+                bottleneck = "STT (Flux)" if stt_latency_ms == max(stt_latency_ms, llm_ttft_ms, tts_ttfb_ms) else \
+                            "LLM (Cerebras)" if llm_ttft_ms == max(stt_latency_ms, llm_ttft_ms, tts_ttfb_ms) else \
+                            "TTS (Cartesia)"
+                logger.info(f"      🎯 Bottleneck: {bottleneck}")
                 
                 # Emit structured event for external tracking (async via task)
                 async def emit_turn_metrics():

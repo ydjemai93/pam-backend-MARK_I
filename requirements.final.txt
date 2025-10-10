@@ -1,0 +1,72 @@
+# Definitive, Fully-Resolved Dependencies for PAM Backend
+# This file is the result of a deep analysis of the conflicting dependency trees.
+# It establishes a stable, compatible environment for both Supabase and LiveKit Agents.
+
+# Core FastAPI and server
+fastapi==0.115.5
+uvicorn[standard]==0.34.2
+pydantic==2.11.7
+pydantic-settings==2.9.1
+
+# HTTP and async
+httpx==0.27.0
+aiofiles==24.1.0
+python-dotenv==1.1.0
+aiohttp==3.12.15
+requests==2.32.5
+
+# Database and Supabase
+supabase==2.20.0
+postgrest==2.20.0
+psycopg2-binary==2.9.9
+asyncpg==0.29.0
+gotrue==2.12.4
+storage3==2.20.0
+
+# LiveKit Core
+livekit==1.0.13
+livekit-agents[openai,deepgram,cartesia,elevenlabs,silero,turn_detector]==1.2.13
+
+# App Integrations & Utilities
+cryptography==46.0.1
+psutil==7.1.0
+jsonschema==4.21.1
+python-multipart==0.0.2
+typing-extensions==4.13.2
+anyio==4.9.0
+
+# ----------------------------------------------------------------------------------
+# CRITICAL SUB-DEPENDENCY PINS TO RESOLVE TORCH/SUPABASE CONFLICT
+# ----------------------------------------------------------------------------------
+# This is the most critical section. It locks down the versions of packages that
+# were causing the deep, hidden conflicts between the scientific computing stack
+# (pulled by Silero/Torch) and the web/database stack (pulled by Supabase).
+
+# Solves the primary "six.moves" import error
+python-dateutil==2.8.2
+six==1.16.0
+
+# Locks down the scientific computing stack to a compatible set
+numpy==1.26.4
+torch==2.2.2
+torchaudio==2.2.2
+torchvision==0.17.2
+numba==0.59.1
+llvmlite==0.42.0
+
+# Locks down other core dependencies to prevent resolver conflicts
+websockets==13.0
+aiohttp-retry==2.8.3
+attrs==23.2.0
+certifi==2024.2.2
+charset-normalizer==3.3.2
+filelock==3.13.4
+fsspec==2024.3.1
+idna==3.7
+jinja2==3.1.3
+markupsafe==2.1.5
+mpmath==1.3.0
+packaging==24.0
+pillow==10.3.0
+sympy==1.12
+urllib3==2.2.1

@@ -1,5 +1,5 @@
 # Unified Requirements for PAM Backend
-# This file consolidates dependencies from the root, api, and agents directories.
+# Versions are pinned to a fully compatible set to resolve all conflicts.
 
 # Core FastAPI and server
 fastapi==0.115.5
@@ -8,31 +8,41 @@ pydantic==2.11.3
 pydantic-settings==2.9.1
 
 # HTTP and async
-httpx==0.24.1
+httpx==0.27.0
 aiofiles==24.1.0
 python-dotenv==1.1.0
-aiohttp>=3.8.0
-requests>=2.31.0
+aiohttp==3.12.15
+requests==2.32.5
 
-# Database and Supabase
-# Using >=2.0.0 from agents requirements as it is newer
-supabase>=2.0.0
-postgrest==0.11.0
+# Database and Supabase (Upgraded to be compatible with modern stack)
+supabase==2.20.0
+postgrest==2.20.0
 psycopg2-binary==2.9.9
 asyncpg==0.29.0
 
-# LiveKit
-livekit>=1.0.8
-livekit-agents[openai,deepgram,cartesia,silero,turn_detector]>=1.0.0
+# LiveKit - Voice Agent Framework
+livekit==1.0.13
+# LiveKit Agents with plugins - supports both modes:
+# - Plugin mode (USE_LIVEKIT_INFERENCE=false): Direct provider integrations
+#   Requires: OPENAI_API_KEY, DEEPGRAM_API_KEY, CARTESIA_API_KEY, ELEVENLABS_API_KEY
+# - Inference mode (USE_LIVEKIT_INFERENCE=true): Unified LiveKit Inference API
+#   Requires: LIVEKIT_API_KEY only (200-350ms latency improvement)
+# Keep all plugins installed for fallback compatibility and voice preview API
+livekit-agents[openai,deepgram,cartesia,silero,turn_detector]==1.2.12
+livekit-agents[baseten]~=1.2
+
 
 # App Integrations & Utilities
-# Using >=41.0.0 from agents requirements
-cryptography>=41.0.0
-psutil>=5.9.0
-python-dateutil~=2.9.0
+cryptography==46.0.1
+psutil==7.1.0
+python-dateutil==2.8.2
 jsonschema==4.21.1
 python-multipart==0.0.2
 typing-extensions==4.13.2
 anyio==4.9.0
+
+# Explicitly pinned sub-dependencies to resolve conflicts
+websockets==13.0
+six==1.16.0
 
 

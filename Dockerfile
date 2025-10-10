@@ -1,5 +1,5 @@
 # Dockerfile for PAM Backend
-FROM python:3.12-slim
+FROM python:3.11
 
 # Install system dependencies for Linux
 # Added ffmpeg for audio processing required by livekit-agents
@@ -14,10 +14,11 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
+# Invalidate Railway build cache
 # Copy requirements first for better caching
-COPY requirements.txt .
+COPY requirements.final.txt .
 RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.final.txt
 
 # Copy application code
 COPY . .

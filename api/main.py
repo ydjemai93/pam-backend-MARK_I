@@ -73,15 +73,6 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="PAM API", version="1.0.0")
 
-# Configure CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],  # Frontend development server
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Global exception handler to prevent backend crashes
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
@@ -123,7 +114,7 @@ origins = [
     "http://localhost:5174", # Port alternatif de Vite
     "http://127.0.0.1:5173",
     "http://127.0.0.1:5174",
-    "https://pam-frontend-cli.vercel.app",  # Production frontend
+    "https://pam-frontend-production.up.railway.app",  # Railway frontend
     os.getenv("FRONTEND_URL", ""),  # Dynamic frontend URL from environment
     # Ajoutez d'autres origines si nécessaire (ex: preview de déploiement)
 ]
@@ -132,9 +123,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins, # Autoriser les origines spécifiques
     allow_credentials=True, # Autoriser les cookies (si vous en utilisez)
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS", "PATCH"], # Méthodes HTTP autorisées - Added DELETE
+    allow_methods=["*"], # Méthodes HTTP autorisées - All methods
     allow_headers=["*"], # Autoriser tous les en-têtes, y compris Content-Type et X-Xano-Authorization
-    # Vous pourriez restreindre les en-têtes à ["Content-Type", "X-Xano-Authorization"] pour plus de sécurité
 )
 # --- Fin Configuration CORS ---
 
@@ -1490,6 +1480,15 @@ async def create_agent(request: AgentCreateRequest, authorization: str = Header(
 @app.get("/")
 def read_root():
     return {"message": "API is running"}
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for Railway and other monitoring services"""
+    return {
+        "status": "healthy",
+        "service": "PAM API",
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 @app.get("/agents")
 async def get_agents(authorization: str = Header(None, alias="Authorization")):
