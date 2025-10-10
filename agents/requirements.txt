@@ -1,0 +1,9 @@
+# Agent Requirements - References parent requirements
+# This file ensures Railway can install dependencies when deploying from agents folder
+
+# Include parent requirements
+-r ../requirements.txt
+
+# Agent-specific dependencies (if any additional ones are needed)
+# Currently all dependencies are in parent requirements.txt
+

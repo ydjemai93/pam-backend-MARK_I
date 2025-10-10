@@ -28,8 +28,7 @@ livekit==1.0.13
 # - Inference mode (USE_LIVEKIT_INFERENCE=true): Unified LiveKit Inference API
 #   Requires: LIVEKIT_API_KEY only (200-350ms latency improvement)
 # Keep all plugins installed for fallback compatibility and voice preview API
-livekit-agents[openai,deepgram,cartesia,silero,turn_detector]==1.2.12
-livekit-agents[baseten]~=1.2
+livekit-agents[openai,deepgram,cartesia,silero,turn_detector,baseten]==1.2.12
 
 
 # App Integrations & Utilities

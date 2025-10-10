@@ -356,8 +356,25 @@ from livekit.plugins import (
     elevenlabs,  # Plugin mode: Direct ElevenLabs TTS integration (custom voice cloning)
     silero,      # Used in both modes: Voice Activity Detection (VAD)
     deepgram,    # Plugin mode: Direct Deepgram STT integration
-    baseten,     # NEW: Baseten plugin for custom L4 GPU models (STT + LLM)
 )
+
+# Conditionally import Baseten plugin (only if needed and available)
+try:
+    from livekit.plugins import baseten
+    BASETEN_PLUGIN_AVAILABLE = True
+    logger.info("✅ Baseten plugin imported successfully")
+except ImportError:
+    BASETEN_PLUGIN_AVAILABLE = False
+    baseten = None  # Prevent NameError when checking USE_BASETEN_* flags
+    logger.warning("⚠️ Baseten plugin not available - Baseten STT/LLM will be disabled")
+    logger.warning("   To enable: pip install 'livekit-agents[baseten]'")
+    # Disable Baseten features if plugin not available
+    if USE_BASETEN_STT or USE_BASETEN_LLM:
+        logger.error("❌ USE_BASETEN_STT or USE_BASETEN_LLM is enabled but baseten plugin not installed!")
+        logger.error("   Falling back to Deepgram/Cerebras automatically")
+        # Override flags to prevent runtime errors
+        USE_BASETEN_STT = False
+        USE_BASETEN_LLM = False
 from livekit.agents.llm import ChatMessage
 from pydantic import BaseModel, Field
 from typing import AsyncIterable
